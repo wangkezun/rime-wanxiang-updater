@@ -37,6 +37,10 @@ pub struct NetworkCfg {
     pub mirrors: Vec<String>,
     #[serde(default = "default_timeout_secs")]
     pub timeout_secs: u64,
+    /// Base URL of the GitHub REST API. Override for GitHub Enterprise or a
+    /// reverse proxy. Defaults to the public API.
+    #[serde(default = "default_api_base")]
+    pub api_base: String,
 }
 
 fn default_mirrors() -> Vec<String> {
@@ -45,12 +49,16 @@ fn default_mirrors() -> Vec<String> {
 fn default_timeout_secs() -> u64 {
     60
 }
+fn default_api_base() -> String {
+    "https://api.github.com".to_string()
+}
 
 impl Default for NetworkCfg {
     fn default() -> Self {
         Self {
             mirrors: default_mirrors(),
             timeout_secs: default_timeout_secs(),
+            api_base: default_api_base(),
         }
     }
 }
@@ -165,6 +173,7 @@ mod tests {
         assert!(cfg.deploy.auto);
         assert_eq!(cfg.network.timeout_secs, 60);
         assert!(cfg.network.mirrors.is_empty());
+        assert_eq!(cfg.network.api_base, "https://api.github.com");
     }
 
     #[test]

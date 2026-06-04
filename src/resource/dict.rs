@@ -51,11 +51,7 @@ impl Resource for DictResource {
                     continue;
                 }
                 let out = rime_dir.join(&rel);
-                if let Some(p) = out.parent() {
-                    std::fs::create_dir_all(p)?;
-                }
-                let mut out_f = std::fs::File::create(&out)?;
-                std::io::copy(&mut entry, &mut out_f)?;
+                crate::fsutil::replace_with_reader(&out, &mut entry)?;
                 report.files_written.push(rel);
             }
             Ok(report)

@@ -18,7 +18,8 @@ async fn main() -> anyhow::Result<()> {
                 cfg.network.timeout_secs,
                 cfg.network.mirrors.clone(),
                 token,
-            )?;
+            )?
+            .with_api_base(cfg.network.api_base.clone());
             let report = wxupd::ops::check::run(&cfg, &gh, &manifest).await?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
@@ -46,7 +47,8 @@ async fn main() -> anyhow::Result<()> {
                 cfg.network.timeout_secs,
                 cfg.network.mirrors.clone(),
                 token,
-            )?;
+            )?
+            .with_api_base(cfg.network.api_base.clone());
             let cache_dir = cache_dir()?;
             let data_dir = data_dir()?;
             let rime_dir = wxupd::platform::rime_user_dir(&cfg.paths.rime_user_dir)?;

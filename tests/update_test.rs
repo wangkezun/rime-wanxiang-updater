@@ -26,32 +26,27 @@ fn build_fake_zip(out: &std::path::Path) {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn update_installs_scheme_and_writes_manifest() {
-    let mirror = MockServer::start().await;
-    // Build a fake zip we'll serve as the asset.
+    // The mock server stands in for the GitHub API (via [network].api_base) and
+    // also serves the asset bytes, so the test never touches the real network.
+    let server = MockServer::start().await;
     let tmp = TempDir::new().unwrap();
     let zip_path = tmp.path().join("rime-wanxiang-base.zip");
     build_fake_zip(&zip_path);
     let zip_bytes = std::fs::read(&zip_path).unwrap();
 
-    // Mock release endpoints (one per repo); also serve the asset bytes.
-    let asset_url = format!("{}/dl/rime-wanxiang-base.zip", mirror.uri());
+    let asset_url = format!("{}/dl/rime-wanxiang-base.zip", server.uri());
     Mock::given(method("GET"))
-        .and(path_regex(r".*amzxyz/rime_wanxiang/releases/latest$"))
+        .and(path_regex(r"^/repos/amzxyz/rime_wanxiang/releases/latest$"))
         .respond_with(ResponseTemplate::new(200).set_body_json(release_json(
             "v1",
             &[("rime-wanxiang-base.zip", &asset_url)],
         )))
-        .mount(&mirror)
-        .await;
-    Mock::given(method("GET"))
-        .and(path_regex(r".*amzxyz/RIME-LMDG/releases/latest$"))
-        .respond_with(ResponseTemplate::new(500)) // gram release "missing" — surfaces as error
-        .mount(&mirror)
+        .mount(&server)
         .await;
     Mock::given(method("GET"))
         .and(path_regex(r"^/dl/rime-wanxiang-base\.zip$"))
         .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
-        .mount(&mirror)
+        .mount(&server)
         .await;
 
     let d = TempDir::new().unwrap();
@@ -59,16 +54,19 @@ async fn update_installs_scheme_and_writes_manifest() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
-         [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
+            // Single-quoted (literal) TOML string so Windows backslash paths
+            // are not interpreted as escape sequences.
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = '{}'\n\
+         [network]\napi_base = \"{}\"\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
-            mirror.uri()
+            server.uri()
         ),
     )
     .unwrap();
     let manifest_path = d.path().join("manifest.json");
 
-    // We only ask for the scheme to side-step the failing gram mock.
+    // We only ask for the scheme; gram/dict lookups are left unmocked (404) but
+    // are filtered out by the `scheme` argument, so they cannot affect the run.
     let assert = Command::cargo_bin("wxupd")
         .unwrap()
         .env("WXUPD_CONFIG", &cfg_path)
@@ -88,12 +86,14 @@ async fn update_installs_scheme_and_writes_manifest() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn update_records_check_error_in_failures() {
-    let mirror = MockServer::start().await;
-    // All release endpoints return 500 → all resources end with Status::Error.
+    let server = MockServer::start().await;
+    // Every release lookup (latest and by-tag) returns 500 → all resources end
+    // with Status::Error. Pointing api_base at the mock means there is no real
+    // GitHub to fall back to, so the failure is deterministic.
     Mock::given(method("GET"))
-        .and(path_regex(r".*releases/latest$"))
+        .and(path_regex(r"^/repos/.*/releases/.*$"))
         .respond_with(ResponseTemplate::new(500))
-        .mount(&mirror)
+        .mount(&server)
         .await;
 
     let d = TempDir::new().unwrap();
@@ -101,10 +101,12 @@ async fn update_records_check_error_in_failures() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
-             [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
+            // Single-quoted (literal) TOML string so Windows backslash paths
+            // are not interpreted as escape sequences.
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = '{}'\n\
+             [network]\napi_base = \"{}\"\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
-            mirror.uri()
+            server.uri()
         ),
     )
     .unwrap();
