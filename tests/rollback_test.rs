@@ -42,11 +42,61 @@ async fn rolls_back_to_previous_and_removes_new_files() {
     manifest.save(&manifest_path).unwrap();
 
     let cfg = Config { deploy: wxupd::config::DeployCfg { auto: false }, ..Config::default() };
-    let outcome = run(&cfg, &mut manifest, &manifest_path, &rime, RollbackArgs { only: vec!["scheme".into()], no_deploy: true }).await.unwrap();
+    let data_dir = d.path().join("data");
+    let outcome = run(&cfg, &mut manifest, &manifest_path, &data_dir, &rime, RollbackArgs { only: vec!["scheme".into()], no_deploy: true }).await.unwrap();
 
     assert_eq!(outcome.rolled_back, vec![("scheme".into(), "v2".into(), "v1".into())]);
     assert!(!rime.join("v2-only.yaml").exists(), "v2-only.yaml should be deleted");
     assert_eq!(std::fs::read(rime.join("shared.yaml")).unwrap(), b"V1 contents");
     assert_eq!(manifest.resources["scheme"].tag, "v1");
     assert_eq!(manifest.resources["scheme"].history[0].tag, "v2");
+}
+
+#[tokio::test]
+async fn rerollback_restores_original_version() {
+    let d = TempDir::new().unwrap();
+    let rime = d.path().join("rime");
+    std::fs::create_dir_all(&rime).unwrap();
+    // Start at v2.
+    std::fs::write(rime.join("v2-only.yaml"), b"V2 added").unwrap();
+    std::fs::write(rime.join("shared.yaml"), b"V2 contents").unwrap();
+
+    // Prepare v1 backup tar.zst (the historical backup).
+    let stash = d.path().join("stash"); std::fs::create_dir_all(&stash).unwrap();
+    std::fs::write(stash.join("shared.yaml"), b"V1 contents").unwrap();
+    let backup_path = d.path().join("backups/scheme/v1.tar.zst");
+    write_tar_zst(&stash, &[std::path::PathBuf::from("shared.yaml")], &backup_path).unwrap();
+
+    let mut resources = BTreeMap::new();
+    resources.insert("scheme".into(), ResourceEntry {
+        tag: "v2".into(), asset_name: "z".into(), sha256: "x".into(),
+        installed_at: Utc::now(),
+        files_installed: vec!["v2-only.yaml".into(), "shared.yaml".into()],
+        history: vec![HistoryEntry {
+            tag: "v1".into(), asset_name: "z".into(), sha256: "y".into(),
+            backup: backup_path.clone(),
+            installed_at: Utc::now(),
+            files_installed: vec!["shared.yaml".into()],
+        }],
+    });
+    let mut manifest = Manifest { schema_version: 1, resources };
+    let manifest_path = d.path().join("manifest.json");
+    let data_dir = d.path().join("data");
+    manifest.save(&manifest_path).unwrap();
+    let cfg = Config { deploy: wxupd::config::DeployCfg { auto: false }, ..Config::default() };
+
+    // First rollback: v2 -> v1.
+    run(&cfg, &mut manifest, &manifest_path, &data_dir, &rime,
+        RollbackArgs { only: vec!["scheme".into()], no_deploy: true }).await.unwrap();
+    assert_eq!(std::fs::read(rime.join("shared.yaml")).unwrap(), b"V1 contents");
+    assert!(!rime.join("v2-only.yaml").exists());
+    assert_eq!(manifest.resources["scheme"].tag, "v1");
+
+    // Second rollback: should redo, restoring v2.
+    run(&cfg, &mut manifest, &manifest_path, &data_dir, &rime,
+        RollbackArgs { only: vec!["scheme".into()], no_deploy: true }).await.unwrap();
+    assert_eq!(std::fs::read(rime.join("shared.yaml")).unwrap(), b"V2 contents", "shared.yaml should be back to v2");
+    assert!(rime.join("v2-only.yaml").exists(), "v2-only.yaml should be restored");
+    assert_eq!(std::fs::read(rime.join("v2-only.yaml")).unwrap(), b"V2 added");
+    assert_eq!(manifest.resources["scheme"].tag, "v2");
 }

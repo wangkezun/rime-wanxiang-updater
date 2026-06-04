@@ -1,11 +1,11 @@
-use crate::backup::extract_tar_zst;
+use crate::backup::{extract_tar_zst, write_tar_zst};
 use crate::config::Config;
 use crate::manifest::{HistoryEntry, Manifest, ResourceEntry};
 use crate::platform;
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub struct RollbackArgs {
     pub only: Vec<String>,
@@ -21,6 +21,7 @@ pub async fn run(
     cfg: &Config,
     manifest: &mut Manifest,
     manifest_path: &Path,
+    data_dir: &Path,
     rime_dir: &Path,
     args: RollbackArgs,
 ) -> Result<RollbackOutcome> {
@@ -48,6 +49,15 @@ pub async fn run(
             continue;
         };
 
+        // Capture current state BEFORE modifying the rime_dir, so a second rollback can redo.
+        let current_backup_path = data_dir
+            .join("backups")
+            .join(&id)
+            .join(format!("{}.tar.zst", current.tag));
+        let current_paths: Vec<PathBuf> =
+            current.files_installed.iter().map(PathBuf::from).collect();
+        write_tar_zst(rime_dir, &current_paths, &current_backup_path)?;
+
         // Delete files present in current but not in prev (these were *added* by the latest install).
         let prev_files: HashSet<&String> = prev.files_installed.iter().collect();
         for rel in &current.files_installed {
@@ -68,7 +78,7 @@ pub async fn run(
             tag: current.tag.clone(),
             asset_name: current.asset_name.clone(),
             sha256: current.sha256.clone(),
-            backup: prev.backup.clone(), // reuse the same tar — it represents the *old* (now-current) state
+            backup: current_backup_path, // freshly captured snapshot of the state being rolled back from
             installed_at: current.installed_at,
             files_installed: current.files_installed.clone(),
         });
