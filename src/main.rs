@@ -68,7 +68,22 @@ async fn main() -> anyhow::Result<()> {
             for (id, from, to) in &outcome.rolled_back { println!("{id}: {from} -> {to}"); }
             for (id, reason) in &outcome.skipped { println!("{id}: skipped ({reason})"); }
         }
-        wxupd::cli::Command::Config { .. } => println!("config: not implemented yet"),
+        wxupd::cli::Command::Config { action } => match action {
+            wxupd::cli::ConfigAction::Show => {
+                let cfg_path = wxupd::config::config_path()?;
+                if cfg_path.exists() {
+                    print!("{}", std::fs::read_to_string(&cfg_path)?);
+                } else {
+                    println!("# no config.toml yet at {}", cfg_path.display());
+                }
+            }
+            wxupd::cli::ConfigAction::Set { kv } => {
+                let (k, v) = kv.split_once('=').ok_or_else(|| anyhow::anyhow!("expected KEY=VALUE"))?;
+                let cfg_path = wxupd::config::config_path()?;
+                wxupd::config::Config::set_dotted(&cfg_path, k.trim(), v.trim())?;
+                println!("set {k} = {v}");
+            }
+        },
     }
     Ok(())
 }
