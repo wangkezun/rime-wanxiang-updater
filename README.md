@@ -38,9 +38,58 @@ If `github.com` is slow or blocked, configure mirrors:
 
     wxupd config set network.mirrors="https://ghfast.top,https://ghproxy.com"
 
-A personal access token (PAT) lifts the anonymous rate limit:
+A personal access token (PAT) lifts the anonymous 60 req/h rate limit. Most users don't need one; if you do, **don't paste it into `config.toml`** — that file may end up in dotfile backups or sync targets. Set `GITHUB_TOKEN` from a secret store instead.
 
-    export GITHUB_TOKEN=ghp_...
+### Reusing `gh auth token` (recommended, all platforms)
+
+If you already use the [GitHub CLI](https://cli.github.com/), reuse its token:
+
+**macOS / Linux** — add to `~/.zshrc` (or `~/.bashrc`):
+```bash
+export GITHUB_TOKEN=$(gh auth token 2>/dev/null)
+```
+
+**Windows** — add to your PowerShell profile (`$PROFILE`):
+```powershell
+$env:GITHUB_TOKEN = (gh auth token 2>$null)
+```
+
+### Without `gh`
+
+**macOS** — store in Keychain once:
+```bash
+security add-generic-password -a wxupd -s github-token -w "ghp_xxxx"
+# then in ~/.zshrc:
+export GITHUB_TOKEN=$(security find-generic-password -a wxupd -s github-token -w 2>/dev/null)
+```
+
+**Linux** — use the [`pass`](https://www.passwordstore.org/) password store or freedesktop secret-service:
+```bash
+pass insert wxupd/github-token
+# then in ~/.bashrc:
+export GITHUB_TOKEN=$(pass wxupd/github-token 2>/dev/null)
+```
+
+**Windows** — Credential Manager via the [`CredentialManager`](https://www.powershellgallery.com/packages/CredentialManager) PowerShell module:
+```powershell
+Install-Module CredentialManager -Scope CurrentUser
+New-StoredCredential -Target wxupd-github -UserName wxupd -Password "ghp_xxxx" -Persist LocalMachine
+# then in $PROFILE:
+$cred = Get-StoredCredential -Target wxupd-github -ErrorAction SilentlyContinue
+if ($cred) { $env:GITHUB_TOKEN = $cred.GetNetworkCredential().Password }
+```
+
+### Quick & dirty (not recommended for shared machines)
+
+Persist a user-level env var directly. Plaintext in your user profile but at least out of dotfile sync:
+
+```powershell
+# Windows
+[Environment]::SetEnvironmentVariable("GITHUB_TOKEN", "ghp_xxxx", "User")
+```
+
+After whichever method above, verify:
+
     wxupd check
 
 ## Subcommands
