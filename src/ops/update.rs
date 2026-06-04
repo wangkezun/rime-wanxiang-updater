@@ -44,6 +44,10 @@ pub async fn run(
         }
     }
 
+    // Sweep any temp/sidecar files left behind by a previous run whose
+    // mmap-blocked deletes have since been released (see crate::fsutil).
+    crate::fsutil::purge_stale(rime_dir);
+
     // 1. Discover remotes.
     let check_report = check::run(cfg, gh, manifest).await?;
 

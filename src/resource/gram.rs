@@ -36,10 +36,11 @@ impl Resource for GramResource {
             });
         }
         let dst = rime_dir.join(&rel);
-        if let Some(p) = dst.parent() {
-            tokio::fs::create_dir_all(p).await?;
-        }
-        tokio::fs::copy(downloaded, &dst).await?;
+        // Replace via a temp-file rename so an existing .gram that the running
+        // Rime engine holds memory-mapped does not trigger os error 1224.
+        let downloaded = downloaded.to_path_buf();
+        tokio::task::spawn_blocking(move || crate::fsutil::replace_copy(&downloaded, &dst))
+            .await??;
         Ok(InstallReport {
             files_written: vec![rel],
             files_skipped: vec![],
