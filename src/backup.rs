@@ -7,13 +7,17 @@ use std::path::{Path, PathBuf};
 /// Missing files are skipped silently — they may have been deleted between
 /// the manifest write and the backup call.
 pub fn write_tar_zst(root: &Path, rel_paths: &[PathBuf], out: &Path) -> Result<()> {
-    if let Some(p) = out.parent() { fs::create_dir_all(p)?; }
+    if let Some(p) = out.parent() {
+        fs::create_dir_all(p)?;
+    }
     let file = File::create(out).with_context(|| format!("create {}", out.display()))?;
     let enc = zstd::Encoder::new(BufWriter::new(file), 3)?.auto_finish();
     let mut tar = tar::Builder::new(enc);
     for rel in rel_paths {
         let abs = root.join(rel);
-        if !abs.exists() { continue; }
+        if !abs.exists() {
+            continue;
+        }
         tar.append_path_with_name(&abs, rel)
             .with_context(|| format!("append {}", rel.display()))?;
     }
@@ -31,7 +35,9 @@ pub fn extract_tar_zst(archive: &Path, root: &Path) -> Result<Vec<PathBuf>> {
         let mut entry = entry?;
         let rel = entry.path()?.to_path_buf();
         let dst = root.join(&rel);
-        if let Some(p) = dst.parent() { fs::create_dir_all(p)?; }
+        if let Some(p) = dst.parent() {
+            fs::create_dir_all(p)?;
+        }
         entry.unpack(&dst)?;
         written.push(rel);
     }

@@ -44,7 +44,11 @@ impl Github {
             .timeout(Duration::from_secs(timeout_secs))
             .user_agent(concat!("wxupd/", env!("CARGO_PKG_VERSION")))
             .build()?;
-        Ok(Self { client, token, mirrors })
+        Ok(Self {
+            client,
+            token,
+            mirrors,
+        })
     }
 
     pub async fn latest_release(&self, repo: &str) -> Result<Release> {
@@ -53,11 +57,18 @@ impl Github {
             vec![base.clone()]
         } else {
             let base_clone = base.clone();
-            self.mirrors.iter().map(move |m| format!("{}/{}", m.trim_end_matches('/'), base_clone)).chain(std::iter::once(base)).collect()
+            self.mirrors
+                .iter()
+                .map(move |m| format!("{}/{}", m.trim_end_matches('/'), base_clone))
+                .chain(std::iter::once(base))
+                .collect()
         };
         let mut last_err: Option<anyhow::Error> = None;
         for url in urls {
-            let mut req = self.client.get(&url).header("Accept", "application/vnd.github+json");
+            let mut req = self
+                .client
+                .get(&url)
+                .header("Accept", "application/vnd.github+json");
             if let Some(t) = &self.token {
                 req = req.header("Authorization", format!("Bearer {t}"));
             }
@@ -84,7 +95,10 @@ impl Github {
 
 /// Mirror the download URL of an asset through the same chain.
 pub fn rewrite_asset_url(url: &str, mirrors: &[String]) -> Vec<String> {
-    let mut out: Vec<String> = mirrors.iter().map(|m| format!("{}/{}", m.trim_end_matches('/'), url)).collect();
+    let mut out: Vec<String> = mirrors
+        .iter()
+        .map(|m| format!("{}/{}", m.trim_end_matches('/'), url))
+        .collect();
     out.push(url.to_string());
     out
 }

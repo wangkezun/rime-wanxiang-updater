@@ -37,7 +37,10 @@ pub struct HistoryEntry {
 
 impl Default for Manifest {
     fn default() -> Self {
-        Self { schema_version: SCHEMA_VERSION, resources: BTreeMap::new() }
+        Self {
+            schema_version: SCHEMA_VERSION,
+            resources: BTreeMap::new(),
+        }
     }
 }
 
@@ -47,7 +50,8 @@ impl Manifest {
             return Ok(Self::default());
         }
         let bytes = fs::read(path).with_context(|| format!("read {}", path.display()))?;
-        let m: Self = serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))?;
+        let m: Self =
+            serde_json::from_slice(&bytes).with_context(|| format!("parse {}", path.display()))?;
         Ok(m)
     }
 
@@ -136,17 +140,37 @@ mod tests {
     fn promote_pushes_old_into_history_and_prunes() {
         let mut m = Manifest::default();
         m.resources.insert("scheme".into(), entry("v1"));
-        let pruned = m.promote("scheme", entry("v2"), Some(PathBuf::from("b/v1.tar.zst")), 3);
+        let pruned = m.promote(
+            "scheme",
+            entry("v2"),
+            Some(PathBuf::from("b/v1.tar.zst")),
+            3,
+        );
         assert!(pruned.is_empty());
         assert_eq!(m.resources["scheme"].tag, "v2");
         assert_eq!(m.resources["scheme"].history[0].tag, "v1");
 
-        let pruned = m.promote("scheme", entry("v3"), Some(PathBuf::from("b/v2.tar.zst")), 3);
+        let pruned = m.promote(
+            "scheme",
+            entry("v3"),
+            Some(PathBuf::from("b/v2.tar.zst")),
+            3,
+        );
         assert!(pruned.is_empty());
-        let pruned = m.promote("scheme", entry("v4"), Some(PathBuf::from("b/v3.tar.zst")), 3);
+        let pruned = m.promote(
+            "scheme",
+            entry("v4"),
+            Some(PathBuf::from("b/v3.tar.zst")),
+            3,
+        );
         assert!(pruned.is_empty());
         // 4th promotion forces the oldest (v1) out.
-        let pruned = m.promote("scheme", entry("v5"), Some(PathBuf::from("b/v4.tar.zst")), 3);
+        let pruned = m.promote(
+            "scheme",
+            entry("v5"),
+            Some(PathBuf::from("b/v4.tar.zst")),
+            3,
+        );
         assert_eq!(pruned, vec![PathBuf::from("b/v1.tar.zst")]);
         assert_eq!(m.resources["scheme"].history.len(), 3);
     }

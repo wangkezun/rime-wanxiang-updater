@@ -13,10 +13,15 @@ impl SafeList {
         for p in patterns {
             b.add(Glob::new(p)?);
         }
-        Ok(Self { patterns: patterns.to_vec(), set: b.build()? })
+        Ok(Self {
+            patterns: patterns.to_vec(),
+            set: b.build()?,
+        })
     }
 
-    pub fn patterns(&self) -> &[String] { &self.patterns }
+    pub fn patterns(&self) -> &[String] {
+        &self.patterns
+    }
 
     pub fn defaults_plus(extra: &[String]) -> Result<Self> {
         let defaults = [
@@ -28,7 +33,11 @@ impl SafeList {
             "sync/**",
             "build/**",
         ];
-        let merged: Vec<String> = defaults.iter().map(|s| s.to_string()).chain(extra.iter().cloned()).collect();
+        let merged: Vec<String> = defaults
+            .iter()
+            .map(|s| s.to_string())
+            .chain(extra.iter().cloned())
+            .collect();
         Self::new(&merged)
     }
 

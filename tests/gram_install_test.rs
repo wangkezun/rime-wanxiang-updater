@@ -12,7 +12,13 @@ async fn install_copies_single_file() {
     let rime = d.path().join("rime");
     let safe = SafeList::defaults_plus(&[]).unwrap();
     let report = GramResource.install(&src, &rime, &safe).await.unwrap();
-    assert_eq!(report.files_written, vec![std::path::PathBuf::from("wanxiang-lts-zh-hans.gram")]);
+    assert_eq!(
+        report.files_written,
+        vec![std::path::PathBuf::from("wanxiang-lts-zh-hans.gram")]
+    );
     assert!(report.files_skipped.is_empty());
-    assert_eq!(fs::read(rime.join("wanxiang-lts-zh-hans.gram")).unwrap(), b"\x00\x01\x02gram bytes");
+    assert_eq!(
+        fs::read(rime.join("wanxiang-lts-zh-hans.gram")).unwrap(),
+        b"\x00\x01\x02gram bytes"
+    );
 }

@@ -12,6 +12,12 @@ async fn install_copies_yaml() {
     let rime = d.path().join("rime");
     let safe = SafeList::defaults_plus(&[]).unwrap();
     let r = DictResource.install(&src, &rime, &safe).await.unwrap();
-    assert_eq!(r.files_written, vec![std::path::PathBuf::from("cn_en_mix.dict.yaml")]);
-    assert_eq!(fs::read(rime.join("cn_en_mix.dict.yaml")).unwrap(), b"# yaml");
+    assert_eq!(
+        r.files_written,
+        vec![std::path::PathBuf::from("cn_en_mix.dict.yaml")]
+    );
+    assert_eq!(
+        fs::read(rime.join("cn_en_mix.dict.yaml")).unwrap(),
+        b"# yaml"
+    );
 }

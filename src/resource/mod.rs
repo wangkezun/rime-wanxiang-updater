@@ -1,6 +1,6 @@
-pub mod scheme;
-pub mod gram;
 pub mod dict;
+pub mod gram;
+pub mod scheme;
 
 use crate::config::Config;
 use crate::github::{Asset, Github, Release};
@@ -36,11 +36,19 @@ pub trait Resource: Send + Sync {
         let rel = gh.latest_release(self.repo()).await?;
         select_asset(&rel, &self.asset_pattern(cfg)?)
     }
-    async fn install(&self, downloaded: &Path, rime_dir: &Path, safe: &SafeList) -> Result<InstallReport>;
+    async fn install(
+        &self,
+        downloaded: &Path,
+        rime_dir: &Path,
+        safe: &SafeList,
+    ) -> Result<InstallReport>;
 }
 
 pub fn select_asset(rel: &Release, pat: &Regex) -> Result<RemoteRef> {
-    let asset: &Asset = rel.assets.iter().find(|a| pat.is_match(&a.name))
+    let asset: &Asset = rel
+        .assets
+        .iter()
+        .find(|a| pat.is_match(&a.name))
         .ok_or_else(|| anyhow!("no asset in tag {} matches {}", rel.tag_name, pat.as_str()))?;
     Ok(RemoteRef {
         tag: rel.tag_name.clone(),
@@ -70,11 +78,14 @@ mod tests {
         Release {
             tag_name: "v1.0".into(),
             published_at: Utc::now(),
-            assets: assets.into_iter().map(|(n, s)| Asset {
-                name: n.into(),
-                browser_download_url: format!("https://example.com/{n}"),
-                size: s,
-            }).collect(),
+            assets: assets
+                .into_iter()
+                .map(|(n, s)| Asset {
+                    name: n.into(),
+                    browser_download_url: format!("https://example.com/{n}"),
+                    size: s,
+                })
+                .collect(),
         }
     }
 

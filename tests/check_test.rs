@@ -48,7 +48,8 @@ async fn check_reports_not_installed_for_empty_manifest() {
     .unwrap();
     let manifest_path = d.path().join("manifest.json");
 
-    let assert = Command::cargo_bin("wxupd").unwrap()
+    let assert = Command::cargo_bin("wxupd")
+        .unwrap()
         .env("WXUPD_CONFIG", &cfg_path)
         .env("WXUPD_MANIFEST", &manifest_path)
         .args(["check", "--json"])

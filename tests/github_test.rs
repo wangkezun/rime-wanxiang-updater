@@ -17,7 +17,9 @@ async fn picks_first_successful_mirror() {
         }]
     });
     Mock::given(method("GET"))
-        .and(path("/https://api.github.com/repos/amzxyz/rime_wanxiang/releases/latest"))
+        .and(path(
+            "/https://api.github.com/repos/amzxyz/rime_wanxiang/releases/latest",
+        ))
         .respond_with(ResponseTemplate::new(200).set_body_json(&body))
         .mount(&mirror)
         .await;
@@ -37,8 +39,14 @@ async fn falls_through_to_next_mirror_on_500() {
         "published_at": "2026-01-01T00:00:00Z",
         "assets": []
     });
-    Mock::given(method("GET")).respond_with(ResponseTemplate::new(500)).mount(&bad).await;
-    Mock::given(method("GET")).respond_with(ResponseTemplate::new(200).set_body_json(&body)).mount(&good).await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&bad)
+        .await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&good)
+        .await;
 
     let gh = Github::new(5, vec![bad.uri(), good.uri()], None).unwrap();
     let rel = gh.latest_release("foo/bar").await.unwrap();

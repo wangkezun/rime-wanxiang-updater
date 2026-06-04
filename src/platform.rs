@@ -7,7 +7,10 @@ pub fn rime_user_dir(override_path: &str) -> Result<PathBuf> {
     if !override_path.is_empty() {
         return Ok(PathBuf::from(override_path));
     }
-    let home = directories::BaseDirs::new().context("no home dir")?.home_dir().to_path_buf();
+    let home = directories::BaseDirs::new()
+        .context("no home dir")?
+        .home_dir()
+        .to_path_buf();
     if cfg!(target_os = "macos") {
         return Ok(home.join("Library/Rime"));
     }
@@ -24,7 +27,9 @@ pub fn rime_user_dir(override_path: &str) -> Result<PathBuf> {
         home.join(".local/share/fcitx5/rime"),
     ];
     for c in &candidates {
-        if c.exists() { return Ok(c.clone()); }
+        if c.exists() {
+            return Ok(c.clone());
+        }
     }
     anyhow::bail!(
         "could not locate Rime user dir; set [paths].rime_user_dir in config.toml. \

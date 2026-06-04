@@ -32,9 +32,24 @@ async fn install_writes_files_and_skips_safelist() {
     let res = SchemeResource;
     let report = res.install(&zip, &rime, &safe).await.unwrap();
 
-    assert!(report.files_written.iter().any(|p| p == std::path::Path::new("wanxiang.schema.yaml")));
-    assert!(report.files_written.iter().any(|p| p == std::path::Path::new("lua/sub.lua")));
-    assert!(report.files_skipped.iter().any(|p| p == std::path::Path::new("wanxiang.custom.yaml")));
-    assert_eq!(fs::read(rime.join("wanxiang.custom.yaml")).unwrap(), b"USER VERSION");
-    assert_eq!(fs::read(rime.join("wanxiang.schema.yaml")).unwrap(), b"schema: hi");
+    assert!(report
+        .files_written
+        .iter()
+        .any(|p| p == std::path::Path::new("wanxiang.schema.yaml")));
+    assert!(report
+        .files_written
+        .iter()
+        .any(|p| p == std::path::Path::new("lua/sub.lua")));
+    assert!(report
+        .files_skipped
+        .iter()
+        .any(|p| p == std::path::Path::new("wanxiang.custom.yaml")));
+    assert_eq!(
+        fs::read(rime.join("wanxiang.custom.yaml")).unwrap(),
+        b"USER VERSION"
+    );
+    assert_eq!(
+        fs::read(rime.join("wanxiang.schema.yaml")).unwrap(),
+        b"schema: hi"
+    );
 }

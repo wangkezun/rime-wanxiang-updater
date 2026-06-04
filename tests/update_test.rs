@@ -37,28 +37,40 @@ async fn update_installs_scheme_and_writes_manifest() {
     let asset_url = format!("{}/dl/wanxiang-pinyin-v1.zip", mirror.uri());
     Mock::given(method("GET"))
         .and(path_regex(r".*amzxyz/rime_wanxiang/releases/latest$"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(release_json("v1", &[("wanxiang-pinyin-v1.zip", &asset_url)])))
-        .mount(&mirror).await;
+        .respond_with(ResponseTemplate::new(200).set_body_json(release_json(
+            "v1",
+            &[("wanxiang-pinyin-v1.zip", &asset_url)],
+        )))
+        .mount(&mirror)
+        .await;
     Mock::given(method("GET"))
         .and(path_regex(r".*amzxyz/RIME-LMDG/releases/latest$"))
-        .respond_with(ResponseTemplate::new(500))  // gram release "missing" — surfaces as error
-        .mount(&mirror).await;
+        .respond_with(ResponseTemplate::new(500)) // gram release "missing" — surfaces as error
+        .mount(&mirror)
+        .await;
     Mock::given(method("GET"))
         .and(path_regex(r"^/dl/wanxiang-pinyin-v1\.zip$"))
         .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
-        .mount(&mirror).await;
+        .mount(&mirror)
+        .await;
 
     let d = TempDir::new().unwrap();
     let cfg_path = d.path().join("config.toml");
-    std::fs::write(&cfg_path, format!(
-        "[scheme]\nvariant = \"pinyin\"\n[paths]\nrime_user_dir = \"{}\"\n\
+    std::fs::write(
+        &cfg_path,
+        format!(
+            "[scheme]\nvariant = \"pinyin\"\n[paths]\nrime_user_dir = \"{}\"\n\
          [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
-        d.path().join("rime").display(), mirror.uri()
-    )).unwrap();
+            d.path().join("rime").display(),
+            mirror.uri()
+        ),
+    )
+    .unwrap();
     let manifest_path = d.path().join("manifest.json");
 
     // We only ask for the scheme to side-step the failing gram mock.
-    let assert = Command::cargo_bin("wxupd").unwrap()
+    let assert = Command::cargo_bin("wxupd")
+        .unwrap()
         .env("WXUPD_CONFIG", &cfg_path)
         .env("WXUPD_MANIFEST", &manifest_path)
         .env("WXUPD_CACHE", d.path().join("cache"))
@@ -67,7 +79,8 @@ async fn update_installs_scheme_and_writes_manifest() {
         .assert();
     assert.success();
 
-    let m: serde_json::Value = serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
+    let m: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
     assert_eq!(m["resources"]["scheme"]["tag"], "v1");
     let installed = d.path().join("rime/wanxiang.schema.yaml");
     assert_eq!(std::fs::read(&installed).unwrap(), b"v1");

@@ -54,9 +54,21 @@ pub async fn run(cfg: &Config, gh: &Github, manifest: &Manifest) -> Result<Check
                     Status::NotInstalled => Some("-".to_string()),
                     _ => local_tag.clone(),
                 };
-                ResourceCheck { id, local_tag: local_for_report, remote_tag: Some(rr.tag), status, error: None }
+                ResourceCheck {
+                    id,
+                    local_tag: local_for_report,
+                    remote_tag: Some(rr.tag),
+                    status,
+                    error: None,
+                }
             }
-            Err(e) => ResourceCheck { id, local_tag, remote_tag: None, status: Status::Error, error: Some(e.to_string()) },
+            Err(e) => ResourceCheck {
+                id,
+                local_tag,
+                remote_tag: None,
+                status: Status::Error,
+                error: Some(e.to_string()),
+            },
         }
     });
     let resources = join_all(futs).await;
@@ -76,7 +88,9 @@ pub fn render_text(rep: &CheckReport) -> String {
             r.remote_tag.as_deref().unwrap_or("-"),
             r.status
         ));
-        if let Some(e) = &r.error { s.push_str(&format!("  error: {e}\n")); }
+        if let Some(e) = &r.error {
+            s.push_str(&format!("  error: {e}\n"));
+        }
     }
     s
 }
