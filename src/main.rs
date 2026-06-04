@@ -1,4 +1,5 @@
 mod cli;
+mod safe_list;
 
 use clap::Parser;
 
