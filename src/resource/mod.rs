@@ -31,9 +31,16 @@ pub struct InstallReport {
 pub trait Resource: Send + Sync {
     fn id(&self) -> &'static str;
     fn repo(&self) -> &str;
+    /// Optional pinned release tag. None means "latest".
+    fn release_tag(&self) -> Option<&str> {
+        None
+    }
     fn asset_pattern(&self, cfg: &Config) -> Result<Regex>;
     async fn latest_remote(&self, gh: &Github, cfg: &Config) -> Result<RemoteRef> {
-        let rel = gh.latest_release(self.repo()).await?;
+        let rel = match self.release_tag() {
+            Some(tag) => gh.release_by_tag(self.repo(), tag).await?,
+            None => gh.latest_release(self.repo()).await?,
+        };
         select_asset(&rel, &self.asset_pattern(cfg)?)
     }
     async fn install(

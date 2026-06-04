@@ -52,7 +52,17 @@ impl Github {
     }
 
     pub async fn latest_release(&self, repo: &str) -> Result<Release> {
-        let base = format!("https://api.github.com/repos/{repo}/releases/latest");
+        self.fetch_release(&format!("repos/{repo}/releases/latest"))
+            .await
+    }
+
+    pub async fn release_by_tag(&self, repo: &str, tag: &str) -> Result<Release> {
+        self.fetch_release(&format!("repos/{repo}/releases/tags/{tag}"))
+            .await
+    }
+
+    async fn fetch_release(&self, url_suffix: &str) -> Result<Release> {
+        let base = format!("https://api.github.com/{url_suffix}");
         let urls = if self.mirrors.is_empty() {
             vec![base.clone()]
         } else {

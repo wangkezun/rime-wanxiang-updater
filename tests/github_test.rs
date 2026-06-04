@@ -52,3 +52,29 @@ async fn falls_through_to_next_mirror_on_500() {
     let rel = gh.latest_release("foo/bar").await.unwrap();
     assert_eq!(rel.tag_name, "v1.0");
 }
+
+#[tokio::test]
+async fn fetches_release_by_tag() {
+    let mirror = MockServer::start().await;
+    let body = serde_json::json!({
+        "tag_name": "LTS",
+        "published_at": "2026-01-01T00:00:00Z",
+        "assets": [{
+            "name": "wanxiang-lts-zh-hans.gram",
+            "browser_download_url": "https://example.com/a.gram",
+            "size": 99
+        }]
+    });
+    Mock::given(method("GET"))
+        .and(path(
+            "/https://api.github.com/repos/amzxyz/RIME-LMDG/releases/tags/LTS",
+        ))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&mirror)
+        .await;
+
+    let gh = Github::new(5, vec![mirror.uri()], None).unwrap();
+    let rel = gh.release_by_tag("amzxyz/RIME-LMDG", "LTS").await.unwrap();
+    assert_eq!(rel.tag_name, "LTS");
+    assert_eq!(rel.assets[0].name, "wanxiang-lts-zh-hans.gram");
+}
