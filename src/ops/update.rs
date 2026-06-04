@@ -48,19 +48,24 @@ pub async fn run(
 
     // 2. Filter to has-update / not-installed (unless --force).
     let mut targets: Vec<(Box<dyn Resource>, RemoteRef)> = Vec::new();
+    let mut pre_failures: Vec<(String, String)> = Vec::new();
     for res in all {
         let rep = check_report.resources.iter().find(|r| r.id == res.id());
         let Some(rep) = rep else { continue };
+        // Surface check-time errors so the user sees them in the failure summary,
+        // regardless of --force. --force cannot recover from a missing remote ref.
+        if rep.status == Status::Error {
+            pre_failures.push((
+                rep.id.clone(),
+                rep.error
+                    .clone()
+                    .unwrap_or_else(|| "remote lookup failed".into()),
+            ));
+            continue;
+        }
         let needs = matches!(rep.status, Status::HasUpdate | Status::NotInstalled) || args.force;
         if !needs {
             continue;
-        }
-        if rep.status == Status::Error {
-            return Err(anyhow!(
-                "cannot update {}: {}",
-                rep.id,
-                rep.error.clone().unwrap_or_default()
-            ));
         }
         // Re-fetch remote ref to get the full struct (check returned a summary).
         let rr = res.latest_remote(gh, cfg).await?;
@@ -70,7 +75,7 @@ pub async fn run(
         return Ok(UpdateResult {
             installed: vec![],
             skipped_protected: vec![],
-            failures: vec![],
+            failures: pre_failures,
         });
     }
 
@@ -108,6 +113,7 @@ pub async fn run(
         skipped_protected: vec![],
         failures: vec![],
     };
+    result.failures.extend(pre_failures);
 
     for ((res, _rr_target), (id, downloaded, sha, rr)) in targets.iter().zip(downloads.iter()) {
         let id = id.clone();

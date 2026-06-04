@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::prelude::*;
 use std::io::Write;
 use tempfile::TempDir;
 use wiremock::matchers::{method, path_regex};
@@ -70,4 +71,43 @@ async fn update_installs_scheme_and_writes_manifest() {
     assert_eq!(m["resources"]["scheme"]["tag"], "v1");
     let installed = d.path().join("rime/wanxiang.schema.yaml");
     assert_eq!(std::fs::read(&installed).unwrap(), b"v1");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn update_records_check_error_in_failures() {
+    let mirror = MockServer::start().await;
+    // All release endpoints return 500 → all resources end with Status::Error.
+    Mock::given(method("GET"))
+        .and(path_regex(r".*releases/latest$"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&mirror)
+        .await;
+
+    let d = TempDir::new().unwrap();
+    let cfg_path = d.path().join("config.toml");
+    std::fs::write(
+        &cfg_path,
+        format!(
+            "[scheme]\nvariant = \"pinyin\"\n[paths]\nrime_user_dir = \"{}\"\n\
+             [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
+            d.path().join("rime").display(),
+            mirror.uri()
+        ),
+    )
+    .unwrap();
+    let manifest_path = d.path().join("manifest.json");
+
+    let assert = Command::cargo_bin("wxupd")
+        .unwrap()
+        .env("WXUPD_CONFIG", &cfg_path)
+        .env("WXUPD_MANIFEST", &manifest_path)
+        .env("WXUPD_CACHE", d.path().join("cache"))
+        .env("WXUPD_DATA", d.path().join("data"))
+        .args(["update"])
+        .assert();
+    // Exit 3 because failures are non-empty.
+    assert
+        .failure()
+        .code(3)
+        .stderr(predicate::str::contains("FAILED"));
 }
