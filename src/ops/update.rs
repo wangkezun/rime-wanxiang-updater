@@ -25,6 +25,7 @@ pub struct UpdateResult {
     pub failures: Vec<(String, String)>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn run(
     cfg: &Config,
     gh: &Github,
@@ -135,7 +136,10 @@ pub async fn run(
 
         // Install.
         match res.install(downloaded, rime_dir, &safe).await {
-            Ok(InstallReport { files_written, files_skipped }) => {
+            Ok(InstallReport {
+                files_written,
+                files_skipped,
+            }) => {
                 if !files_skipped.is_empty() {
                     result.skipped_protected.push((id.clone(), files_skipped));
                 }

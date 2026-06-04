@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Config {
     #[serde(default)]
     pub scheme: SchemeCfg,
@@ -39,12 +39,19 @@ pub struct NetworkCfg {
     pub timeout_secs: u64,
 }
 
-fn default_mirrors() -> Vec<String> { Vec::new() }
-fn default_timeout_secs() -> u64 { 60 }
+fn default_mirrors() -> Vec<String> {
+    Vec::new()
+}
+fn default_timeout_secs() -> u64 {
+    60
+}
 
 impl Default for NetworkCfg {
     fn default() -> Self {
-        Self { mirrors: default_mirrors(), timeout_secs: default_timeout_secs() }
+        Self {
+            mirrors: default_mirrors(),
+            timeout_secs: default_timeout_secs(),
+        }
     }
 }
 
@@ -54,10 +61,16 @@ pub struct DeployCfg {
     pub auto: bool,
 }
 
-fn default_auto_deploy() -> bool { true }
+fn default_auto_deploy() -> bool {
+    true
+}
 
 impl Default for DeployCfg {
-    fn default() -> Self { Self { auto: default_auto_deploy() } }
+    fn default() -> Self {
+        Self {
+            auto: default_auto_deploy(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -66,25 +79,14 @@ pub struct SafeListCfg {
     pub extra: Vec<String>,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            scheme: SchemeCfg::default(),
-            paths: PathsCfg::default(),
-            network: NetworkCfg::default(),
-            deploy: DeployCfg::default(),
-            safe_list: SafeListCfg::default(),
-        }
-    }
-}
-
 impl Config {
     pub fn load(path: &Path) -> Result<Self> {
         if !path.exists() {
             return Ok(Self::default());
         }
         let text = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
-        let cfg: Self = toml::from_str(&text).with_context(|| format!("parse {}", path.display()))?;
+        let cfg: Self =
+            toml::from_str(&text).with_context(|| format!("parse {}", path.display()))?;
         Ok(cfg)
     }
 
@@ -112,7 +114,9 @@ impl Config {
         }
         let tbl = node.as_table_mut().context("target is not a table")?;
         tbl.insert(last, toml_edit::value(value));
-        if let Some(parent) = path.parent() { fs::create_dir_all(parent)?; }
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         fs::write(path, doc.to_string())?;
         Ok(())
     }
@@ -123,8 +127,7 @@ pub fn config_path() -> Result<PathBuf> {
     if let Ok(p) = std::env::var("WXUPD_CONFIG") {
         return Ok(PathBuf::from(p));
     }
-    let dirs = directories::ProjectDirs::from("io", "wkz", "wxupd")
-        .context("no home dir")?;
+    let dirs = directories::ProjectDirs::from("io", "wkz", "wxupd").context("no home dir")?;
     Ok(dirs.config_dir().join("config.toml"))
 }
 
