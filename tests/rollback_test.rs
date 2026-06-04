@@ -32,13 +32,13 @@ async fn rolls_back_to_previous_and_removes_new_files() {
         "scheme".into(),
         ResourceEntry {
             tag: "v2".into(),
-            asset_name: "wanxiang-pinyin-v2.zip".into(),
+            asset_name: "wanxiang-base-v2.zip".into(),
             sha256: "x".into(),
             installed_at: Utc::now(),
             files_installed: vec!["v2-only.yaml".into(), "shared.yaml".into()],
             history: vec![HistoryEntry {
                 tag: "v1".into(),
-                asset_name: "wanxiang-pinyin-v1.zip".into(),
+                asset_name: "wanxiang-base-v1.zip".into(),
                 sha256: "y".into(),
                 backup: backup_path.clone(),
                 installed_at: Utc::now(),

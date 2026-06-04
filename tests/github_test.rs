@@ -11,7 +11,7 @@ async fn picks_first_successful_mirror() {
         "tag_name": "v9.9",
         "published_at": "2026-01-01T00:00:00Z",
         "assets": [{
-            "name": "wanxiang-pinyin-v9.9.zip",
+            "name": "wanxiang-base-v9.9.zip",
             "browser_download_url": "https://example.com/a.zip",
             "size": 1234
         }]

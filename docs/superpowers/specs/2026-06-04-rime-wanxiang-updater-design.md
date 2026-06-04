@@ -143,8 +143,8 @@ Per-resource specifics:
 | Resource | Repo (verified at impl time) | Asset selector | Install action |
 |---|---|---|---|
 | `scheme` | `amzxyz/rime_wanxiang` | `wanxiang-{variant}-.*\.zip` | unzip → SafeList filter → copy to `rime_dir/` |
-| `gram` | `amzxyz/RIME-LMDG` *(verify)* | `wanxiang-lts-zh-hans\.gram` | copy single file to `rime_dir/` |
-| `dict` | TBD at impl (likely same wanxiang repo, separate asset) | `cn_en_.*\.dict\.yaml` | copy yaml(s) to `rime_dir/`, SafeList applies |
+| `gram` | `amzxyz/RIME-LMDG` | `wanxiang-lts-zh-hans\.gram` | copy single file to `rime_dir/` |
+| `dict` | `amzxyz/RIME-LMDG` | `dicts\.zip` (contains `dicts/*.dict.yaml`) | unzip → copy to `rime_dir/`, SafeList applies |
 
 The trait stops at "fetched bytes → installed bytes". Download / sha verification / backup / manifest writes live in the outer `ops::update` orchestrator so each `Resource` impl stays small.
 
@@ -158,7 +158,7 @@ Location:
 
 ```toml
 [scheme]
-variant = "pinyin"          # set on first run (interactive)
+variant = "base"          # set on first run (interactive)
 
 [paths]
 rime_user_dir = ""          # empty = auto-detect; explicit = override
@@ -189,7 +189,7 @@ Location:
   "resources": {
     "scheme": {
       "tag": "v8.3",
-      "asset_name": "wanxiang-pinyin-v8.3.zip",
+      "asset_name": "wanxiang-base-v8.3.zip",
       "sha256": "abc123…",
       "installed_at": "2026-06-04T12:00:00Z",
       "files_installed": ["wanxiang.schema.yaml", "lua/…"],
@@ -337,6 +337,11 @@ A repo secret `GITHUB_PAT` (PAT) can be exposed as `GITHUB_TOKEN` for jobs that 
 
 ## 12. Open implementation-time questions
 
-- Confirm the exact repo + asset names for `gram` and `dict` resources (the current spec lists best-guess values). Implementation should start by reading the actual `amzxyz/rime_wanxiang` (and any sibling) releases page and codifying the asset regex.
-- Confirm Squirrel's deploy CLI invocation on current macOS — there are several stale recipes in the wild.
-- Decide the exact `variant` enum (which double-pinyin schemes ship today).
+The following were resolved during initial implementation:
+
+- ~~Confirm the exact repo + asset names for `gram` and `dict` resources.~~ Resolved — gram is in `amzxyz/RIME-LMDG` tag `LTS` (`wanxiang-lts-zh-hans.gram`); dict is in the same repo tag `dict-nightly` (`dicts.zip`).
+- ~~Decide the exact `variant` enum.~~ Resolved — variant strings pass through unchanged to the asset regex `^rime-wanxiang-{variant}\.zip$`; users write the upstream-defined names (`base`, `flypy-fuzhu`, etc.).
+
+Still open:
+
+- Verify Squirrel's deploy CLI invocation on current macOS. The current spec uses `Squirrel.app/Contents/MacOS/Squirrel --reload`; if that's not correct on the user's macOS version, the right invocation may be via `osascript` or `pkill -USR1 Squirrel`.

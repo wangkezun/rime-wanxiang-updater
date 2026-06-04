@@ -10,10 +10,27 @@ Download a binary from the [latest release](../../releases/latest), or build fro
 
 ## Quick start
 
-    wxupd config set scheme.variant=pinyin   # or flypy, zrm, mspy, ...
+    wxupd config set scheme.variant=base   # see Variants below for other options
     wxupd check
     wxupd update
     wxupd rollback           # if something looks off
+
+## Variants
+
+`scheme.variant` accepts these upstream-defined names (default `base`):
+
+| Variant | Description |
+|---|---|
+| `base` | 全拼基础方案 |
+| `flypy-fuzhu` | 小鹤双拼辅助码 |
+| `zrm-fuzhu` | 自然码辅助码 |
+| `wubi-fuzhu` | 五笔辅助码 |
+| `moqi-fuzhu` | 墨奇辅助码 |
+| `hanxin-fuzhu` | 汉心辅助码 |
+| `shouyou-fuzhu` | 手游辅助码 |
+| `shyplus-fuzhu` | 山卡 Plus 辅助码 |
+| `tiger-fuzhu` | 虎码辅助码 |
+| `wx-fuzhu` | 五笔仿写辅助码 |
 
 ## Network
 

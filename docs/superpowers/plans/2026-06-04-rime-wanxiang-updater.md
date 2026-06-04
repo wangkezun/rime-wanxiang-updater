@@ -1020,7 +1020,7 @@ async fn picks_first_successful_mirror() {
         "tag_name": "v9.9",
         "published_at": "2026-01-01T00:00:00Z",
         "assets": [{
-            "name": "wanxiang-pinyin-v9.9.zip",
+            "name": "wanxiang-base-v9.9.zip",
             "browser_download_url": "https://example.com/a.zip",
             "size": 1234
         }]
@@ -1372,7 +1372,7 @@ impl Resource for SchemeResource {
     fn id(&self) -> &'static str { "scheme" }
     fn repo(&self) -> &str { "amzxyz/rime_wanxiang" }
     fn asset_pattern(&self, cfg: &Config) -> Result<Regex> {
-        let variant = if cfg.scheme.variant.is_empty() { "pinyin" } else { cfg.scheme.variant.as_str() };
+        let variant = if cfg.scheme.variant.is_empty() { "base" } else { cfg.scheme.variant.as_str() };
         Regex::new(&format!(r"^wanxiang-{}-.*\.zip$", regex::escape(variant)))
             .context("invalid scheme variant regex")
     }
@@ -1467,17 +1467,17 @@ mod tests {
 
     #[test]
     fn select_asset_matches_pattern() {
-        let r = rel(vec![("readme.txt", 10), ("wanxiang-pinyin-v1.0.zip", 5000)]);
-        let pat = Regex::new(r"^wanxiang-pinyin-.*\.zip$").unwrap();
+        let r = rel(vec![("readme.txt", 10), ("wanxiang-base-v1.0.zip", 5000)]);
+        let pat = Regex::new(r"^wanxiang-base-.*\.zip$").unwrap();
         let rr = select_asset(&r, &pat).unwrap();
-        assert_eq!(rr.asset_name, "wanxiang-pinyin-v1.0.zip");
+        assert_eq!(rr.asset_name, "wanxiang-base-v1.0.zip");
         assert_eq!(rr.asset_size, 5000);
     }
 
     #[test]
     fn select_asset_fails_when_no_match() {
         let r = rel(vec![("readme.txt", 10)]);
-        let pat = Regex::new(r"^wanxiang-pinyin-.*\.zip$").unwrap();
+        let pat = Regex::new(r"^wanxiang-base-.*\.zip$").unwrap();
         assert!(select_asset(&r, &pat).is_err());
     }
 }
@@ -1932,7 +1932,7 @@ async fn check_reports_not_installed_for_empty_manifest() {
     // The catch-all matcher returns the same body for every release request;
     // good enough for this assertion since we only check exit code + status text.
     Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(release_json("v1.0", "wanxiang-pinyin-v1.0.zip")))
+        .respond_with(ResponseTemplate::new(200).set_body_json(release_json("v1.0", "wanxiang-base-v1.0.zip")))
         .mount(&mirror)
         .await;
 
@@ -2223,22 +2223,22 @@ async fn update_installs_scheme_and_writes_manifest() {
     let mirror = MockServer::start().await;
     // Build a fake zip we'll serve as the asset.
     let tmp = TempDir::new().unwrap();
-    let zip_path = tmp.path().join("wanxiang-pinyin-v1.zip");
+    let zip_path = tmp.path().join("wanxiang-base-v1.zip");
     build_fake_zip(&zip_path);
     let zip_bytes = std::fs::read(&zip_path).unwrap();
 
     // Mock release endpoints (one per repo); also serve the asset bytes.
-    let asset_url = format!("{}/dl/wanxiang-pinyin-v1.zip", mirror.uri());
+    let asset_url = format!("{}/dl/wanxiang-base-v1.zip", mirror.uri());
     Mock::given(method("GET"))
         .and(path_regex(r".*amzxyz/rime_wanxiang/releases/latest$"))
-        .respond_with(ResponseTemplate::new(200).set_body_json(release_json("v1", &[("wanxiang-pinyin-v1.zip", &asset_url)])))
+        .respond_with(ResponseTemplate::new(200).set_body_json(release_json("v1", &[("wanxiang-base-v1.zip", &asset_url)])))
         .mount(&mirror).await;
     Mock::given(method("GET"))
         .and(path_regex(r".*amzxyz/RIME-LMDG/releases/latest$"))
         .respond_with(ResponseTemplate::new(500))  // gram release "missing" — surfaces as error
         .mount(&mirror).await;
     Mock::given(method("GET"))
-        .and(path_regex(r"^/dl/wanxiang-pinyin-v1\.zip$"))
+        .and(path_regex(r"^/dl/wanxiang-base-v1\.zip$"))
         .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
         .mount(&mirror).await;
 
@@ -2433,13 +2433,13 @@ async fn rolls_back_to_previous_and_removes_new_files() {
     let mut resources = BTreeMap::new();
     resources.insert("scheme".into(), ResourceEntry {
         tag: "v2".into(),
-        asset_name: "wanxiang-pinyin-v2.zip".into(),
+        asset_name: "wanxiang-base-v2.zip".into(),
         sha256: "x".into(),
         installed_at: Utc::now(),
         files_installed: vec!["v2-only.yaml".into(), "shared.yaml".into()],
         history: vec![HistoryEntry {
             tag: "v1".into(),
-            asset_name: "wanxiang-pinyin-v1.zip".into(),
+            asset_name: "wanxiang-base-v1.zip".into(),
             sha256: "y".into(),
             backup: backup_path.clone(),
             installed_at: Utc::now(),
