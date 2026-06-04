@@ -7,7 +7,7 @@ A cross-platform CLI to keep [rime-wanxiang](https://github.com/amzxyz/rime_wanx
 ### Homebrew (macOS / Linux)
 
     brew tap wangkezun/rime-wanxiang-updater https://github.com/wangkezun/rime-wanxiang-updater
-    brew install wangkezun/rime-wanxiang-updater/wxupd
+    brew install wxupd
 
 Upgrades come the normal way:
 
