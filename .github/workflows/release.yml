@@ -64,3 +64,52 @@ jobs:
             --title "${{ github.ref_name }}" \
             --notes "Auto-built release for ${{ github.ref_name }}" \
             dist/*
+
+  update-formula:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: rewrite formula
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          sha_arm=$(sha256sum dist/wxupd-${TAG}-aarch64-apple-darwin | awk '{print $1}')
+          sha_intel=$(sha256sum dist/wxupd-${TAG}-x86_64-apple-darwin | awk '{print $1}')
+          sha_linux=$(sha256sum dist/wxupd-${TAG}-x86_64-unknown-linux-musl | awk '{print $1}')
+          python3 - "$version" "$sha_arm" "$sha_intel" "$sha_linux" <<'PY'
+          import re, sys
+          version, sha_arm, sha_intel, sha_linux = sys.argv[1:]
+          path = "Formula/wxupd.rb"
+          src = open(path).read()
+          src = re.sub(r'version "[^"]+"', f'version "{version}"', src, count=1)
+          # Order: aarch64 (arm), x86_64 darwin (intel), x86_64 linux.
+          shas = [sha_arm, sha_intel, sha_linux]
+          def replace_sha(match):
+              replace_sha.idx += 1
+              return f'sha256 "{shas[replace_sha.idx - 1]}"'
+          replace_sha.idx = 0
+          src = re.sub(r'sha256 "[0-9a-f]{64}"', replace_sha, src)
+          open(path, "w").write(src)
+          PY
+      - name: commit + push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet Formula/wxupd.rb; then
+            echo "no formula change"
+            exit 0
+          fi
+          git add Formula/wxupd.rb
+          git commit -m "chore: bump Formula to ${{ github.ref_name }} [skip ci]"
+          git push origin main

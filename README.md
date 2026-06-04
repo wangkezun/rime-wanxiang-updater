@@ -4,7 +4,20 @@ A cross-platform CLI to keep [rime-wanxiang](https://github.com/amzxyz/rime_wanx
 
 ## Install
 
-Download a binary from the [latest release](../../releases/latest), or build from source:
+### Homebrew (macOS / Linux)
+
+    brew tap wangkezun/rime-wanxiang-updater https://github.com/wangkezun/rime-wanxiang-updater
+    brew install wangkezun/rime-wanxiang-updater/wxupd
+
+Upgrades come the normal way:
+
+    brew update && brew upgrade wxupd
+
+### Binary download
+
+Grab the right artifact for your platform from the [latest release](../../releases/latest), `chmod +x`, and put it on `PATH`.
+
+### Build from source
 
     cargo install --path .
 
