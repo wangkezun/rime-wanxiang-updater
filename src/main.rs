@@ -1,3 +1,4 @@
+mod backup;
 mod cli;
 mod config;
 mod manifest;
