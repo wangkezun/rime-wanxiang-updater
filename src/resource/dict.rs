@@ -1,7 +1,7 @@
 use super::{InstallReport, Resource};
 use crate::config::Config;
 use crate::safe_list::SafeList;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use regex::Regex;
 use std::path::Path;
@@ -13,14 +13,14 @@ impl Resource for DictResource {
     fn id(&self) -> &'static str {
         "dict"
     }
-    // NOTE: implementer must verify the correct repo/asset at impl time.
-    // Leaving the wanxiang repo here; the asset pattern below assumes the
-    // cn_en mixed dict ships alongside scheme releases.
     fn repo(&self) -> &str {
-        "amzxyz/rime_wanxiang"
+        "amzxyz/RIME-LMDG"
+    }
+    fn release_tag(&self) -> Option<&str> {
+        Some("dict-nightly")
     }
     fn asset_pattern(&self, _cfg: &Config) -> Result<Regex> {
-        Ok(Regex::new(r"^cn_en_.*\.dict\.yaml$").unwrap())
+        Ok(Regex::new(r"^dicts\.zip$").unwrap())
     }
     async fn install(
         &self,
@@ -28,25 +28,38 @@ impl Resource for DictResource {
         rime_dir: &Path,
         safe: &SafeList,
     ) -> Result<InstallReport> {
-        let file_name = downloaded
-            .file_name()
-            .ok_or_else(|| anyhow::anyhow!("dict source has no file name"))?
-            .to_owned();
-        let rel = std::path::PathBuf::from(&file_name);
-        if safe.is_protected(&rel) {
-            return Ok(InstallReport {
-                files_written: vec![],
-                files_skipped: vec![rel],
-            });
-        }
-        let dst = rime_dir.join(&rel);
-        if let Some(p) = dst.parent() {
-            tokio::fs::create_dir_all(p).await?;
-        }
-        tokio::fs::copy(downloaded, &dst).await?;
-        Ok(InstallReport {
-            files_written: vec![rel],
-            files_skipped: vec![],
+        let downloaded = downloaded.to_path_buf();
+        let rime_dir = rime_dir.to_path_buf();
+        let patterns = safe.patterns().to_vec();
+        tokio::task::spawn_blocking(move || -> Result<InstallReport> {
+            let safe = SafeList::new(&patterns)?;
+            let file = std::fs::File::open(&downloaded)
+                .with_context(|| format!("open {}", downloaded.display()))?;
+            let mut zip = zip::ZipArchive::new(file)?;
+            let mut report = InstallReport::default();
+            std::fs::create_dir_all(&rime_dir)?;
+            for i in 0..zip.len() {
+                let mut entry = zip.by_index(i)?;
+                let Some(rel) = entry.enclosed_name().map(|p| p.to_path_buf()) else {
+                    continue;
+                };
+                if entry.is_dir() {
+                    continue;
+                }
+                if safe.is_protected(&rel) {
+                    report.files_skipped.push(rel);
+                    continue;
+                }
+                let out = rime_dir.join(&rel);
+                if let Some(p) = out.parent() {
+                    std::fs::create_dir_all(p)?;
+                }
+                let mut out_f = std::fs::File::create(&out)?;
+                std::io::copy(&mut entry, &mut out_f)?;
+                report.files_written.push(rel);
+            }
+            Ok(report)
         })
+        .await?
     }
 }

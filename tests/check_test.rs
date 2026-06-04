@@ -23,14 +23,14 @@ async fn check_reports_not_installed_for_empty_manifest() {
     // good enough for this assertion since we only check exit code + status text.
     // Respond to all release API calls with a body that satisfies the asset
     // patterns for scheme (rime-wanxiang-*.zip), gram (wanxiang-lts-zh-hans.gram),
-    // and dict (cn_en_*.dict.yaml) so none return Error status.
+    // and dict (dicts.zip) so none return Error status.
     Mock::given(method("GET"))
         .respond_with(ResponseTemplate::new(200).set_body_json(release_json_multi(
             "v1.0",
             &[
                 "rime-wanxiang-base.zip",
                 "wanxiang-lts-zh-hans.gram",
-                "cn_en_v1.0.dict.yaml",
+                "dicts.zip",
             ],
         )))
         .mount(&mirror)
