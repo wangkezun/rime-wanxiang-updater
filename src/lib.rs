@@ -4,6 +4,7 @@ pub mod config;
 pub mod github;
 pub mod http;
 pub mod manifest;
+pub mod ops;
 pub mod platform;
 pub mod resource;
 pub mod safe_list;
