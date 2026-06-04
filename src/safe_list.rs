@@ -3,6 +3,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::path::Path;
 
 pub struct SafeList {
+    patterns: Vec<String>,
     set: GlobSet,
 }
 
@@ -12,8 +13,10 @@ impl SafeList {
         for p in patterns {
             b.add(Glob::new(p)?);
         }
-        Ok(Self { set: b.build()? })
+        Ok(Self { patterns: patterns.to_vec(), set: b.build()? })
     }
+
+    pub fn patterns(&self) -> &[String] { &self.patterns }
 
     pub fn defaults_plus(extra: &[String]) -> Result<Self> {
         let defaults = [
