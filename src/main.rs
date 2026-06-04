@@ -54,7 +54,19 @@ async fn main() -> anyhow::Result<()> {
                 std::process::exit(3);
             }
         }
-        wxupd::cli::Command::Rollback { .. } => println!("rollback: not implemented yet"),
+        wxupd::cli::Command::Rollback { resources, no_deploy } => {
+            let cfg_path = wxupd::config::config_path()?;
+            let cfg = wxupd::config::Config::load(&cfg_path)?;
+            let manifest_path = manifest_path()?;
+            let mut manifest = wxupd::manifest::Manifest::load(&manifest_path)?;
+            let rime_dir = wxupd::platform::rime_user_dir(&cfg.paths.rime_user_dir)?;
+            let outcome = wxupd::ops::rollback::run(
+                &cfg, &mut manifest, &manifest_path, &rime_dir,
+                wxupd::ops::rollback::RollbackArgs { only: resources, no_deploy },
+            ).await?;
+            for (id, from, to) in &outcome.rolled_back { println!("{id}: {from} -> {to}"); }
+            for (id, reason) in &outcome.skipped { println!("{id}: skipped ({reason})"); }
+        }
         wxupd::cli::Command::Config { .. } => println!("config: not implemented yet"),
     }
     Ok(())
