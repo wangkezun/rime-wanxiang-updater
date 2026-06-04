@@ -2,6 +2,7 @@ mod backup;
 mod cli;
 mod config;
 mod manifest;
+mod platform;
 mod safe_list;
 
 use clap::Parser;
