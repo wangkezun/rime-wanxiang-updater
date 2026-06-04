@@ -113,13 +113,34 @@ impl Config {
             node = tbl.get_mut(k).unwrap();
         }
         let tbl = node.as_table_mut().context("target is not a table")?;
-        tbl.insert(last, toml_edit::value(value));
+        tbl.insert(last, coerce_value(value));
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
         fs::write(path, doc.to_string())?;
         Ok(())
     }
+}
+
+fn coerce_value(value: &str) -> toml_edit::Item {
+    use toml_edit::{Array, Value};
+    if value.contains(',') {
+        let mut arr = Array::new();
+        for part in value.split(',') {
+            arr.push(part.trim());
+        }
+        return toml_edit::Item::Value(Value::Array(arr));
+    }
+    if value == "true" {
+        return toml_edit::value(true);
+    }
+    if value == "false" {
+        return toml_edit::value(false);
+    }
+    if let Ok(n) = value.parse::<i64>() {
+        return toml_edit::value(n);
+    }
+    toml_edit::value(value)
 }
 
 /// Resolve the user's config.toml location per OS (override via `WXUPD_CONFIG`).
@@ -166,10 +187,38 @@ mod tests {
         let d = TempDir::new().unwrap();
         let p = d.path().join("c.toml");
         Config::set_dotted(&p, "network.timeout_secs", "30").unwrap();
-        // Stored as a string; ensure we can still load (toml will keep it as string in this case,
-        // which means downstream code must coerce. For now just assert the file content.)
         let after = std::fs::read_to_string(&p).unwrap();
         assert!(after.contains("[network]"));
-        assert!(after.contains("timeout_secs = \"30\""));
+        assert!(after.contains("timeout_secs = 30"));
+    }
+
+    #[test]
+    fn set_dotted_coerces_bool() {
+        let d = TempDir::new().unwrap();
+        let p = d.path().join("c.toml");
+        Config::set_dotted(&p, "deploy.auto", "false").unwrap();
+        let cfg = Config::load(&p).unwrap();
+        assert!(!cfg.deploy.auto);
+    }
+
+    #[test]
+    fn set_dotted_coerces_csv_to_array() {
+        let d = TempDir::new().unwrap();
+        let p = d.path().join("c.toml");
+        Config::set_dotted(&p, "network.mirrors", "https://a, https://b").unwrap();
+        let cfg = Config::load(&p).unwrap();
+        assert_eq!(
+            cfg.network.mirrors,
+            vec!["https://a".to_string(), "https://b".to_string()]
+        );
+    }
+
+    #[test]
+    fn set_dotted_coerces_int() {
+        let d = TempDir::new().unwrap();
+        let p = d.path().join("c.toml");
+        Config::set_dotted(&p, "network.timeout_secs", "30").unwrap();
+        let cfg = Config::load(&p).unwrap();
+        assert_eq!(cfg.network.timeout_secs, 30);
     }
 }
