@@ -98,17 +98,17 @@ mod tests {
 
     #[test]
     fn select_asset_matches_pattern() {
-        let r = rel(vec![("readme.txt", 10), ("wanxiang-pinyin-v1.0.zip", 5000)]);
-        let pat = Regex::new(r"^wanxiang-pinyin-.*\.zip$").unwrap();
+        let r = rel(vec![("readme.txt", 10), ("rime-wanxiang-base.zip", 5000)]);
+        let pat = Regex::new(r"^rime-wanxiang-base\.zip$").unwrap();
         let rr = select_asset(&r, &pat).unwrap();
-        assert_eq!(rr.asset_name, "wanxiang-pinyin-v1.0.zip");
+        assert_eq!(rr.asset_name, "rime-wanxiang-base.zip");
         assert_eq!(rr.asset_size, 5000);
     }
 
     #[test]
     fn select_asset_fails_when_no_match() {
         let r = rel(vec![("readme.txt", 10)]);
-        let pat = Regex::new(r"^wanxiang-pinyin-.*\.zip$").unwrap();
+        let pat = Regex::new(r"^rime-wanxiang-base\.zip$").unwrap();
         assert!(select_asset(&r, &pat).is_err());
     }
 }

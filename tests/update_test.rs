@@ -29,17 +29,17 @@ async fn update_installs_scheme_and_writes_manifest() {
     let mirror = MockServer::start().await;
     // Build a fake zip we'll serve as the asset.
     let tmp = TempDir::new().unwrap();
-    let zip_path = tmp.path().join("wanxiang-pinyin-v1.zip");
+    let zip_path = tmp.path().join("rime-wanxiang-base.zip");
     build_fake_zip(&zip_path);
     let zip_bytes = std::fs::read(&zip_path).unwrap();
 
     // Mock release endpoints (one per repo); also serve the asset bytes.
-    let asset_url = format!("{}/dl/wanxiang-pinyin-v1.zip", mirror.uri());
+    let asset_url = format!("{}/dl/rime-wanxiang-base.zip", mirror.uri());
     Mock::given(method("GET"))
         .and(path_regex(r".*amzxyz/rime_wanxiang/releases/latest$"))
         .respond_with(ResponseTemplate::new(200).set_body_json(release_json(
             "v1",
-            &[("wanxiang-pinyin-v1.zip", &asset_url)],
+            &[("rime-wanxiang-base.zip", &asset_url)],
         )))
         .mount(&mirror)
         .await;
@@ -49,7 +49,7 @@ async fn update_installs_scheme_and_writes_manifest() {
         .mount(&mirror)
         .await;
     Mock::given(method("GET"))
-        .and(path_regex(r"^/dl/wanxiang-pinyin-v1\.zip$"))
+        .and(path_regex(r"^/dl/rime-wanxiang-base\.zip$"))
         .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
         .mount(&mirror)
         .await;
@@ -59,7 +59,7 @@ async fn update_installs_scheme_and_writes_manifest() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"pinyin\"\n[paths]\nrime_user_dir = \"{}\"\n\
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
          [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
             mirror.uri()
@@ -101,7 +101,7 @@ async fn update_records_check_error_in_failures() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"pinyin\"\n[paths]\nrime_user_dir = \"{}\"\n\
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
              [network]\nmirrors = [\"{}\"]\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
             mirror.uri()

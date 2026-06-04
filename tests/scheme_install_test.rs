@@ -21,7 +21,7 @@ fn build_fake_zip(out: &std::path::Path) {
 #[tokio::test]
 async fn install_writes_files_and_skips_safelist() {
     let d = TempDir::new().unwrap();
-    let zip = d.path().join("scheme.zip");
+    let zip = d.path().join("rime-wanxiang-base.zip");
     build_fake_zip(&zip);
     let rime = d.path().join("rime");
     // Pre-existing user-customised file we must not clobber.

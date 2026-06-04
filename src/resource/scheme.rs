@@ -18,11 +18,11 @@ impl Resource for SchemeResource {
     }
     fn asset_pattern(&self, cfg: &Config) -> Result<Regex> {
         let variant = if cfg.scheme.variant.is_empty() {
-            "pinyin"
+            "base"
         } else {
             cfg.scheme.variant.as_str()
         };
-        Regex::new(&format!(r"^wanxiang-{}-.*\.zip$", regex::escape(variant)))
+        Regex::new(&format!(r"^rime-wanxiang-{}\.zip$", regex::escape(variant)))
             .context("invalid scheme variant regex")
     }
     async fn install(
