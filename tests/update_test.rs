@@ -54,7 +54,9 @@ async fn update_installs_scheme_and_writes_manifest() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
+            // Single-quoted (literal) TOML string so Windows backslash paths
+            // are not interpreted as escape sequences.
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = '{}'\n\
          [network]\napi_base = \"{}\"\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
             server.uri()
@@ -99,7 +101,9 @@ async fn update_records_check_error_in_failures() {
     std::fs::write(
         &cfg_path,
         format!(
-            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = \"{}\"\n\
+            // Single-quoted (literal) TOML string so Windows backslash paths
+            // are not interpreted as escape sequences.
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = '{}'\n\
              [network]\napi_base = \"{}\"\ntimeout_secs = 5\n[deploy]\nauto = false\n",
             d.path().join("rime").display(),
             server.uri()
