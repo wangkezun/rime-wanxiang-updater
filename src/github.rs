@@ -36,7 +36,10 @@ pub struct Github {
     client: Client,
     token: Option<String>,
     mirrors: Vec<String>,
+    api_base: String,
 }
+
+const DEFAULT_API_BASE: &str = "https://api.github.com";
 
 impl Github {
     pub fn new(timeout_secs: u64, mirrors: Vec<String>, token: Option<String>) -> Result<Self> {
@@ -48,7 +51,18 @@ impl Github {
             client,
             token,
             mirrors,
+            api_base: DEFAULT_API_BASE.to_string(),
         })
+    }
+
+    /// Override the REST API base URL (GitHub Enterprise, a proxy, or a test
+    /// mock). An empty value keeps the public default.
+    pub fn with_api_base(mut self, api_base: impl Into<String>) -> Self {
+        let base = api_base.into();
+        if !base.is_empty() {
+            self.api_base = base;
+        }
+        self
     }
 
     pub async fn latest_release(&self, repo: &str) -> Result<Release> {
@@ -62,7 +76,7 @@ impl Github {
     }
 
     async fn fetch_release(&self, url_suffix: &str) -> Result<Release> {
-        let base = format!("https://api.github.com/{url_suffix}");
+        let base = format!("{}/{url_suffix}", self.api_base.trim_end_matches('/'));
         let urls = if self.mirrors.is_empty() {
             vec![base.clone()]
         } else {
