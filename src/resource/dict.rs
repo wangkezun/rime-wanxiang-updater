@@ -18,7 +18,17 @@ impl Resource for DictResource {
     fn asset_pattern(&self, _cfg: &Config) -> Result<Regex> {
         Ok(Regex::new(r"^cn_en_.*\.dict\.yaml$").unwrap())
     }
-    async fn install(&self, _downloaded: &Path, _rime_dir: &Path, _safe: &SafeList) -> Result<InstallReport> {
-        anyhow::bail!("dict install: implemented in Task 12")
+    async fn install(&self, downloaded: &Path, rime_dir: &Path, safe: &SafeList) -> Result<InstallReport> {
+        let file_name = downloaded.file_name()
+            .ok_or_else(|| anyhow::anyhow!("dict source has no file name"))?
+            .to_owned();
+        let rel = std::path::PathBuf::from(&file_name);
+        if safe.is_protected(&rel) {
+            return Ok(InstallReport { files_written: vec![], files_skipped: vec![rel] });
+        }
+        let dst = rime_dir.join(&rel);
+        if let Some(p) = dst.parent() { tokio::fs::create_dir_all(p).await?; }
+        tokio::fs::copy(downloaded, &dst).await?;
+        Ok(InstallReport { files_written: vec![rel], files_skipped: vec![] })
     }
 }
