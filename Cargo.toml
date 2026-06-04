@@ -10,6 +10,9 @@ license = "MIT"
 name = "wxupd"
 path = "src/main.rs"
 
+[lib]
+path = "src/lib.rs"
+
 [dependencies]
 anyhow = "1"
 thiserror = "1"
