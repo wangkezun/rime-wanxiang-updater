@@ -18,7 +18,14 @@ impl Resource for GramResource {
     fn asset_pattern(&self, _cfg: &Config) -> Result<Regex> {
         Ok(Regex::new(r"^wanxiang-lts-zh-hans\.gram$").unwrap())
     }
-    async fn install(&self, _downloaded: &Path, _rime_dir: &Path, _safe: &SafeList) -> Result<InstallReport> {
-        anyhow::bail!("gram install: implemented in Task 11")
+    async fn install(&self, downloaded: &Path, rime_dir: &Path, safe: &SafeList) -> Result<InstallReport> {
+        let rel = std::path::PathBuf::from("wanxiang-lts-zh-hans.gram");
+        if safe.is_protected(&rel) {
+            return Ok(InstallReport { files_written: vec![], files_skipped: vec![rel] });
+        }
+        let dst = rime_dir.join(&rel);
+        if let Some(p) = dst.parent() { tokio::fs::create_dir_all(p).await?; }
+        tokio::fs::copy(downloaded, &dst).await?;
+        Ok(InstallReport { files_written: vec![rel], files_skipped: vec![] })
     }
 }
