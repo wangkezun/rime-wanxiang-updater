@@ -13,11 +13,11 @@ impl Resource for GramResource {
     fn id(&self) -> &'static str {
         "gram"
     }
-    // NOTE: implementer must verify this repo name against the upstream
-    // wanxiang release ecosystem at impl time. amzxyz/RIME-LMDG was the
-    // dedicated gram release repo as of the spec date.
     fn repo(&self) -> &str {
         "amzxyz/RIME-LMDG"
+    }
+    fn release_tag(&self) -> Option<&str> {
+        Some("LTS")
     }
     fn asset_pattern(&self, _cfg: &Config) -> Result<Regex> {
         Ok(Regex::new(r"^wanxiang-lts-zh-hans\.gram$").unwrap())
