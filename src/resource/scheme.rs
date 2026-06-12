@@ -1,4 +1,4 @@
-use super::{InstallReport, Resource};
+use super::{install_zip, InstallReport, Resource};
 use crate::config::Config;
 use crate::safe_list::SafeList;
 use anyhow::{Context, Result};
@@ -31,34 +31,6 @@ impl Resource for SchemeResource {
         rime_dir: &Path,
         safe: &SafeList,
     ) -> Result<InstallReport> {
-        let downloaded = downloaded.to_path_buf();
-        let rime_dir = rime_dir.to_path_buf();
-        let patterns = safe.patterns().to_vec();
-        tokio::task::spawn_blocking(move || -> Result<InstallReport> {
-            let safe = SafeList::new(&patterns)?;
-            let file = std::fs::File::open(&downloaded)
-                .with_context(|| format!("open {}", downloaded.display()))?;
-            let mut zip = zip::ZipArchive::new(file)?;
-            let mut report = InstallReport::default();
-            std::fs::create_dir_all(&rime_dir)?;
-            for i in 0..zip.len() {
-                let mut entry = zip.by_index(i)?;
-                let Some(rel) = entry.enclosed_name().map(|p| p.to_path_buf()) else {
-                    continue;
-                };
-                if entry.is_dir() {
-                    continue;
-                }
-                if safe.is_protected(&rel) {
-                    report.files_skipped.push(rel);
-                    continue;
-                }
-                let out = rime_dir.join(&rel);
-                crate::fsutil::replace_with_reader(&out, &mut entry)?;
-                report.files_written.push(rel);
-            }
-            Ok(report)
-        })
-        .await?
+        install_zip(downloaded, rime_dir, safe).await
     }
 }

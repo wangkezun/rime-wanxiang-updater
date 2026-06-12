@@ -85,6 +85,85 @@ async fn update_installs_scheme_and_writes_manifest() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn update_failed_download_does_not_block_other_resources() {
+    let server = MockServer::start().await;
+    let tmp = TempDir::new().unwrap();
+    let zip_path = tmp.path().join("rime-wanxiang-base.zip");
+    build_fake_zip(&zip_path);
+    let zip_bytes = std::fs::read(&zip_path).unwrap();
+
+    // Scheme: release lookup and asset download both succeed.
+    let scheme_asset_url = format!("{}/dl/rime-wanxiang-base.zip", server.uri());
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/repos/amzxyz/rime_wanxiang/releases/latest$"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(release_json(
+            "v1",
+            &[("rime-wanxiang-base.zip", &scheme_asset_url)],
+        )))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/dl/rime-wanxiang-base\.zip$"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(zip_bytes))
+        .mount(&server)
+        .await;
+
+    // Gram: release lookup succeeds but the asset download returns 500.
+    let gram_asset_url = format!("{}/dl/wanxiang-lts-zh-hans.gram", server.uri());
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/repos/amzxyz/RIME-LMDG/releases/tags/LTS$"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(release_json(
+            "LTS",
+            &[("wanxiang-lts-zh-hans.gram", &gram_asset_url)],
+        )))
+        .mount(&server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path_regex(r"^/dl/wanxiang-lts-zh-hans\.gram$"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&server)
+        .await;
+
+    let d = TempDir::new().unwrap();
+    let cfg_path = d.path().join("config.toml");
+    std::fs::write(
+        &cfg_path,
+        format!(
+            // Single-quoted (literal) TOML string so Windows backslash paths
+            // are not interpreted as escape sequences.
+            "[scheme]\nvariant = \"base\"\n[paths]\nrime_user_dir = '{}'\n\
+             [network]\napi_base = \"{}\"\ntimeout_secs = 5\n[deploy]\nauto = false\n",
+            d.path().join("rime").display(),
+            server.uri()
+        ),
+    )
+    .unwrap();
+    let manifest_path = d.path().join("manifest.json");
+
+    let assert = Command::cargo_bin("wxupd")
+        .unwrap()
+        .env("WXUPD_CONFIG", &cfg_path)
+        .env("WXUPD_MANIFEST", &manifest_path)
+        .env("WXUPD_CACHE", d.path().join("cache"))
+        .env("WXUPD_DATA", d.path().join("data"))
+        .args(["update", "scheme", "gram"])
+        .assert();
+    // Exit 3 (per-resource failure), not a hard abort: scheme installed, gram FAILED.
+    assert
+        .failure()
+        .code(3)
+        .stdout(predicate::str::contains("scheme: - -> v1"))
+        .stderr(predicate::str::contains("gram: FAILED"));
+
+    let m: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&manifest_path).unwrap()).unwrap();
+    assert_eq!(m["resources"]["scheme"]["tag"], "v1");
+    assert!(m["resources"].get("gram").is_none());
+    let installed = d.path().join("rime/wanxiang.schema.yaml");
+    assert_eq!(std::fs::read(&installed).unwrap(), b"v1");
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn update_records_check_error_in_failures() {
     let server = MockServer::start().await;
     // Every release lookup (latest and by-tag) returns 500 → all resources end

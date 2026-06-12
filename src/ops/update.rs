@@ -9,7 +9,7 @@ use crate::resource::{registry, InstallReport, RemoteRef, Resource};
 use crate::safe_list::SafeList;
 use anyhow::{anyhow, Context, Result};
 use chrono::Utc;
-use futures_util::future::try_join_all;
+use futures_util::future::join_all;
 use std::path::{Path, PathBuf};
 use tracing::warn;
 
@@ -108,7 +108,8 @@ pub async fn run(
             Err(last_err.unwrap_or_else(|| anyhow!("no urls to try")))
         }
     });
-    let downloads = try_join_all(dl_futs).await?;
+    // A failed download only fails that resource; the rest still install.
+    let downloads = join_all(dl_futs).await;
 
     // 4. Serial install.
     let safe = SafeList::defaults_plus(&cfg.safe_list.extra)?;
@@ -120,8 +121,14 @@ pub async fn run(
     };
     result.failures.extend(pre_failures);
 
-    for ((res, _rr_target), (id, downloaded, sha, rr)) in targets.iter().zip(downloads.iter()) {
-        let id = id.clone();
+    for ((res, _rr_target), dl) in targets.iter().zip(downloads) {
+        let (id, downloaded, sha, rr) = match dl {
+            Ok(v) => v,
+            Err(e) => {
+                result.failures.push((res.id().to_string(), e.to_string()));
+                continue;
+            }
+        };
         // Backup the prior state of files this install will touch (if any).
         let prior_files = manifest
             .resources
@@ -139,7 +146,7 @@ pub async fn run(
         };
 
         // Install.
-        match res.install(downloaded, rime_dir, &safe).await {
+        match res.install(&downloaded, rime_dir, &safe).await {
             Ok(InstallReport {
                 files_written,
                 files_skipped,
