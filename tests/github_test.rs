@@ -20,9 +20,7 @@ async fn fetches_latest_release() {
         .mount(&server)
         .await;
 
-    let gh = Github::new(5, None)
-        .unwrap()
-        .with_api_base(server.uri());
+    let gh = Github::new(5, None).unwrap().with_api_base(server.uri());
     let rel = gh.latest_release("amzxyz/rime_wanxiang").await.unwrap();
     assert_eq!(rel.tag_name, "v9.9");
     assert_eq!(rel.assets.len(), 1);
@@ -46,9 +44,7 @@ async fn fetches_release_by_tag() {
         .mount(&server)
         .await;
 
-    let gh = Github::new(5, None)
-        .unwrap()
-        .with_api_base(server.uri());
+    let gh = Github::new(5, None).unwrap().with_api_base(server.uri());
     let rel = gh.release_by_tag("amzxyz/RIME-LMDG", "LTS").await.unwrap();
     assert_eq!(rel.tag_name, "LTS");
     assert_eq!(rel.assets[0].name, "wanxiang-lts-zh-hans.gram");

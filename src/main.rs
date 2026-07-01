@@ -14,11 +14,8 @@ async fn main() -> anyhow::Result<()> {
             let manifest_path = manifest_path()?;
             let manifest = wxupd::manifest::Manifest::load(&manifest_path)?;
             let token = std::env::var("GITHUB_TOKEN").ok();
-            let gh = wxupd::github::Github::new(
-                cfg.network.timeout_secs,
-                token,
-            )?
-            .with_api_base(cfg.network.api_base.clone());
+            let gh = wxupd::github::Github::new(cfg.network.timeout_secs, token)?
+                .with_api_base(cfg.network.api_base.clone());
             let report = wxupd::ops::check::run(&cfg, &gh, &manifest).await?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&report)?);
@@ -42,11 +39,8 @@ async fn main() -> anyhow::Result<()> {
             let manifest_path = manifest_path()?;
             let mut manifest = wxupd::manifest::Manifest::load(&manifest_path)?;
             let token = std::env::var("GITHUB_TOKEN").ok();
-            let gh = wxupd::github::Github::new(
-                cfg.network.timeout_secs,
-                token,
-            )?
-            .with_api_base(cfg.network.api_base.clone());
+            let gh = wxupd::github::Github::new(cfg.network.timeout_secs, token)?
+                .with_api_base(cfg.network.api_base.clone());
             let cache_dir = cache_dir()?;
             let data_dir = data_dir()?;
             let rime_dir = wxupd::platform::rime_user_dir(&cfg.paths.rime_user_dir)?;
