@@ -16,7 +16,6 @@ async fn main() -> anyhow::Result<()> {
             let token = std::env::var("GITHUB_TOKEN").ok();
             let gh = wxupd::github::Github::new(
                 cfg.network.timeout_secs,
-                cfg.network.mirrors.clone(),
                 token,
             )?
             .with_api_base(cfg.network.api_base.clone());
@@ -45,7 +44,6 @@ async fn main() -> anyhow::Result<()> {
             let token = std::env::var("GITHUB_TOKEN").ok();
             let gh = wxupd::github::Github::new(
                 cfg.network.timeout_secs,
-                cfg.network.mirrors.clone(),
                 token,
             )?
             .with_api_base(cfg.network.api_base.clone());
