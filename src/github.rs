@@ -30,6 +30,17 @@ pub struct Asset {
     pub name: String,
     pub browser_download_url: String,
     pub size: u64,
+    /// GitHub-generated integrity digest, format `sha256:<hex>`. Present only
+    /// for assets uploaded after 2025-06-03; older assets omit the field.
+    #[serde(default)]
+    pub digest: Option<String>,
+}
+
+impl Asset {
+    /// Hex sha256 parsed from the `digest` field (`sha256:<hex>`), if present.
+    pub fn sha256(&self) -> Option<&str> {
+        self.digest.as_ref()?.strip_prefix("sha256:")
+    }
 }
 
 pub struct Github {

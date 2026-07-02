@@ -17,6 +17,8 @@ pub struct RemoteRef {
     pub asset_name: String,
     pub asset_url: String,
     pub asset_size: u64,
+    /// Hex sha256 from the GitHub `asset.digest` field; `None` for assets
+    /// uploaded before GitHub started exposing digests (2025-06-03).
     pub sha256: Option<String>,
     pub published_at: DateTime<Utc>,
 }
@@ -62,7 +64,7 @@ pub fn select_asset(rel: &Release, pat: &Regex) -> Result<RemoteRef> {
         asset_name: asset.name.clone(),
         asset_url: asset.browser_download_url.clone(),
         asset_size: asset.size,
-        sha256: None, // upstream rarely publishes; left None unless a sibling .sha256 asset is found
+        sha256: asset.sha256().map(|s| s.to_string()),
         published_at: rel.published_at,
     })
 }
@@ -131,6 +133,7 @@ mod tests {
                     name: n.into(),
                     browser_download_url: format!("https://example.com/{n}"),
                     size: s,
+                    digest: None,
                 })
                 .collect(),
         }
@@ -150,5 +153,14 @@ mod tests {
         let r = rel(vec![("readme.txt", 10)]);
         let pat = Regex::new(r"^rime-wanxiang-base\.zip$").unwrap();
         assert!(select_asset(&r, &pat).is_err());
+    }
+
+    #[test]
+    fn select_asset_extracts_sha256_from_digest() {
+        let mut r = rel(vec![("rime-wanxiang-base.zip", 5000)]);
+        r.assets[0].digest = Some("sha256:deadbeef".into());
+        let pat = Regex::new(r"^rime-wanxiang-base\.zip$").unwrap();
+        let rr = select_asset(&r, &pat).unwrap();
+        assert_eq!(rr.sha256.as_deref(), Some("deadbeef"));
     }
 }
