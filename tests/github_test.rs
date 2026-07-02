@@ -67,3 +67,27 @@ fn rewrites_asset_url_with_mirrors() {
         ]
     );
 }
+
+#[tokio::test]
+async fn parses_asset_digest_field() {
+    let server = MockServer::start().await;
+    let body = serde_json::json!({
+        "tag_name": "v1",
+        "published_at": "2026-01-01T00:00:00Z",
+        "assets": [{
+            "name": "a.zip",
+            "browser_download_url": "https://example.com/a.zip",
+            "size": 10,
+            "digest": "sha256:abc123"
+        }]
+    });
+    Mock::given(method("GET"))
+        .and(path("/repos/amzxyz/rime_wanxiang/releases/latest"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(&body))
+        .mount(&server)
+        .await;
+    let gh = Github::new(5, None).unwrap().with_api_base(server.uri());
+    let rel = gh.latest_release("amzxyz/rime_wanxiang").await.unwrap();
+    assert_eq!(rel.assets[0].digest.as_deref(), Some("sha256:abc123"));
+    assert_eq!(rel.assets[0].sha256(), Some("abc123"));
+}

@@ -19,7 +19,8 @@ pub struct Config {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SchemeCfg {
-    /// One of: pinyin, flypy, zrm, mspy, jdh, ...; resolved against upstream asset list.
+    /// Matches an upstream asset `rime-wanxiang-{variant}.zip` (e.g. `base`,
+    /// `pure`, `flypy-fuzhu`, `zrm-fuzhu`, `wubi-fuzhu`, ...). Empty defaults to `base`.
     #[serde(default)]
     pub variant: String,
 }
