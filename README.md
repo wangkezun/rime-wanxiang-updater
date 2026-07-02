@@ -35,6 +35,7 @@ Grab the right artifact for your platform from the [latest release](../../releas
 | Variant | Description |
 |---|---|
 | `base` | 全拼基础方案 |
+| `pure` | 精简版（最小词库，适用无 lua 的旧系统） |
 | `flypy-fuzhu` | 小鹤双拼辅助码 |
 | `zrm-fuzhu` | 自然码辅助码 |
 | `wubi-fuzhu` | 五笔辅助码 |
